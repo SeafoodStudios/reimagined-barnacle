@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<!-- Created with https://snail-ide.js.org/Snail-IDE-Packager/ -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- We only include this to explicitly loosen the CSP of various packager environments. It does not provide any security. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:">
+  <title>Light Switch Simulator v1.3.1</title>
+  <style>
+    body {
+      color: #ffffff;
+      font-family: sans-serif;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    :root, body.is-fullscreen {
+      background-color: #000000;
+    }
+    [hidden] {
+      display: none !important;
+    }
+    h1 {
+      font-weight: normal;
+    }
+    a {
+      color: inherit;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    #app, #loading, #error, #launch {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      cursor: default;
+      user-select: none;
+      -webkit-user-select: none;
+      background-color: #000000;
+    }
+    #launch {
+      background-color: rgba(0, 0, 0, 0.7);
+      cursor: pointer;
+    }
+    .green-flag {
+      width: 80px;
+      height: 80px;
+      padding: 16px;
+      border-radius: 100%;
+      background: rgba(255, 255, 255, 0.75);
+      border: 3px solid hsla(0, 100%, 100%, 1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-sizing: border-box;
+    }
+    #loading {
+      
+    }
+    .progress-bar-outer {
+      border: 1px solid currentColor;
+      height: 10px;
+      width: 200px;
+      max-width: 200px;
+    }
+    .progress-bar-inner {
+      height: 100%;
+      width: 0;
+      background-color: currentColor;
+    }
+    .loading-text, noscript {
+      font-weight: normal;
+      font-size: 36px;
+      margin: 0 0 16px;
+    }
+    .loading-image {
+      margin: 0 0 16px;
+    }
+    #error-message, #error-stack {
+      font-family: monospace;
+      max-width: 600px;
+      white-space: pre-wrap;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    #error-stack {
+      text-align: left;
+      max-height: 200px;
+      overflow: auto;
+    }
+    .control-button {
+      width: 2rem;
+      height: 2rem;
+      padding: 0.375rem;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: pointer;
+      border: 0;
+      border-radius: 4px;
+    }
+    .control-button:hover {
+      background: #00c3ff26;
+    }
+    .control-button.active {
+      background: #00c3ff59;
+    }
+    .fullscreen-button {
+      background: white !important;
+    }
+    .standalone-fullscreen-button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-radius: 0 0 0 4px;
+      padding: 4px;
+      cursor: pointer;
+    }
+    .sc-canvas {
+      cursor: auto;
+    }
+    .sc-monitor-root[data-opcode^="data_"] .sc-monitor-value-color {
+      background-color: #ff8c1a;
+    }
+    .sc-monitor-row-value-outer {
+      background-color: #fc662c;
+    }
+    .sc-monitor-row-value-editing .sc-monitor-row-value-outer {
+      background-color: #e25b27;
+    }
+    
+  </style>
+  <meta name="theme-color" content="#000000">
+  
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="launch" class="screen" hidden title="Click to start">
+    <div class="green-flag">
+      <svg viewBox="0 0 16.63 17.5" width="42" height="44">
+        <defs><style>.cls-1,.cls-2{fill:#007AF4;stroke:#003080;stroke-linecap:round;stroke-linejoin:round;}.cls-2{stroke-width:1.5px;}</style></defs>
+        <path class="cls-1" d="M.75,2A6.44,6.44,0,0,1,8.44,2h0a6.44,6.44,0,0,0,7.69,0V12.4a6.44,6.44,0,0,1-7.69,0h0a6.44,6.44,0,0,0-7.69,0"/>
+        <line class="cls-2" x1="0.75" y1="16.75" x2="0.75" y2="0.75"/>
+      </svg>
+    </div>
+  </div>
+
+  <div id="loading" class="screen">
+    <noscript>Enable JavaScript</noscript>
+    <h1 class="loading-text">Loading...</h1>
+    
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="loading-inner"></div></div>
+  </div>
+
+  <div id="error" class="screen" hidden>
+    <h1>Error</h1>
+    <details>
+      <summary id="error-message"></summary>
+      <p id="error-stack"></p>
+    </details>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    const appElement = document.getElementById('app');
+    const launchScreen = document.getElementById('launch');
+    const loadingScreen = document.getElementById('loading');
+    const loadingInner = document.getElementById('loading-inner');
+    const errorScreen = document.getElementById('error');
+    const errorScreenMessage = document.getElementById('error-message');
+    const errorScreenStack = document.getElementById('error-stack');
+
+    const handleError = (error) => {
+      console.error(error);
+      if (!errorScreen.hidden) return;
+      errorScreen.hidden = false;
+      errorScreenMessage.textContent = '' + error;
+      let debug = error && error.stack || 'no stack';
+      debug += '\nUser agent: ' + navigator.userAgent;
+      errorScreenStack.textContent = debug;
+    };
+    const setProgress = (progress) => {
+      if (loadingInner) loadingInner.style.width = progress * 100 + '%';
+    };
+    const interpolate = (a, b, t) => a + t * (b - a);
+
+    try {
+      setProgress(0.1);
+
+      const scaffolding = new Scaffolding.Scaffolding();
+      scaffolding.width = 480;
+      scaffolding.height = 360;
+      scaffolding.resizeMode = "preserve-ratio";
+      scaffolding.editableLists = false;
+      scaffolding.usePackagedRuntime = true;
+      scaffolding.setup();
+      scaffolding.appendTo(appElement);
+
+      const vm = scaffolding.vm;
+      window.scaffolding = scaffolding;
+      window.vm = scaffolding.vm;
+      window.Scratch = {
+        vm,
+        renderer: vm.renderer,
+        audioEngine: vm.runtime.audioEngine,
+        bitmapAdapter: vm.runtime.v2BitmapAdapter,
+        videoProvider: vm.runtime.ioDevices.video.provider
+      };
+
+      scaffolding.setUsername("player####".replace(/#/g, () => Math.floor(Math.random() * 10)));
+      scaffolding.setAccentColor("#00c3ff");
+
+      try {
+        scaffolding.addCloudProvider(new Scaffolding.Cloud.WebSocketProvider(["wss://clouddata.turbowarp.org","wss://clouddata.turbowarp.xyz"], "p4-@Light Switch Simulator v1.3.1.snail"));
+      } catch (error) {
+        console.error(error);
+      }
+
+      vm.setTurboMode(false);
+      if (vm.setInterpolation) vm.setInterpolation(false);
+      if (vm.setFramerate) vm.setFramerate(30);
+      if (vm.renderer.setUseHighQualityRender) vm.renderer.setUseHighQualityRender(false);
+      if (vm.setRuntimeOptions) vm.setRuntimeOptions({
+        fencing: true,
+        miscLimits: true,
+        maxClones: 300,
+        dangerousOptimizations: false
+      });
+      if (vm.setCompilerOptions) vm.setCompilerOptions({
+        enabled: true,
+        warpTimer: false
+      });
+      if (vm.renderer.setMaxTextureDimension) vm.renderer.setMaxTextureDimension(2048);
+
+      if (typeof ScaffoldingAddons !== 'undefined') {
+        ScaffoldingAddons.run(scaffolding, {"gamepad":false,"pointerlock":false,"specialCloudBehaviors":false,"unsafeCloudBehaviors":false,"pause":false});
+      }
+
+      scaffolding.setExtensionSecurityManager({
+        getSandboxMode: () => 'unsandboxed',
+        canLoadExtensionFromProject: () => true
+      });
+      for (const extension of ["data:text/javascript;,(function(Scratch)%20%7B%20%2F%2F%20Under%20MIT%20LICENSE%20(C)%0A%2F%2F%20Version%201.7%0A%2F%2F%20Created%20by%20Mariocraft987%20%7Bhttps%3A%2F%2Fscratch.mit.edu%2Fusers%2Fmariocraft987%2F%7D%0A%0A(function%20(Scratch)%20%7B%0A%20%20%22use%20strict%22%3B%0A%20%20class%20RandomlyBlocks%20%7B%0A%20%20%20%20getInfo()%20%7B%0A%20%20%20%20%20%20return%20%7B%0A%20%20%20%20%20%20%20%20id%3A%20'randomlyblockscool'%2C%0A%20%20%20%20%20%20%20%20name%3A%20'Randomly%20Blocks'%2C%0A%20%20%20%20%20%20%20%20color1%3A%20'%2307f290'%2C%0A%20%20%20%20%20%20%20%20color2%3A%20'%231ee894'%2C%0A%20%20%20%20%20%20%20%20blocks%3A%20%5B%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20'alertname'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.COMMAND%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20'Alert%20%5BSTR%5D'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20arguments%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20STR%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20type%3A%20Scratch.ArgumentType.STRING%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20defaultValue%3A%20%22Hello%20world!%22%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20'changeTitle'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.COMMAND%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20'Change%20website%20title%20to%20%5BSTR%5D'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20arguments%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20STR%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20type%3A%20Scratch.ArgumentType.STRING%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20defaultValue%3A%20%22Randomly%20blocks%22%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20'consoleAdd'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.COMMAND%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20'Add%20%5BSTR%5D%20to%20console%20log'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20arguments%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20STR%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20type%3A%20Scratch.ArgumentType.STRING%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20defaultValue%3A%20%22Penguin%22%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20'consoleError'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.COMMAND%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20'Add%20%5BSTR%5D%20to%20console%20error'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20arguments%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20STR%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20type%3A%20Scratch.ArgumentType.STRING%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20defaultValue%3A%20%22banana%22%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%22---%22%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20'amExist'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.BOOLEAN%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20'True%3F'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20'notExist'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.BOOLEAN%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20'Do%20Dinosaurs%20exist%3F'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20'YesNoAlert'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.BOOLEAN%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20'%22Ok%22%20button%20pressed%20on%20alert%20%5BSTR%5D%3F'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20arguments%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20STR%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20type%3A%20Scratch.ArgumentType.STRING%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20defaultValue%3A%20%22Popup%22%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20'inputAlert'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20'Input%20of%20%5BSTR%5D%20with%20default%20of%20%5Bdefault%5D'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20arguments%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20STR%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20type%3A%20Scratch.ArgumentType.STRING%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20defaultValue%3A%20%22What's%20your%20username%3F%22%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20default%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20type%3A%20Scratch.ArgumentType.STRING%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20defaultValue%3A%20%22mariocraft987%22%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20'getDate'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20'get%20Date'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20'getMilisecs'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20'get%20Milliseconds'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20'getTime1970'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20'get%20Milliseconds%20since%201970'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20'currentHoliday'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20'current%20holiday'%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%20%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%5D%2C%0A%20%20%20%20%20%20%7D%3B%0A%20%20%20%20%7D%0A%20%20%20%20alertname(args)%20%7B%0A%20%20%20%20%20%20alert(args.STR)%0A%20%20%20%20%7D%20%20%20%20%0A%20%20%20%20%20%20%0A%20%20%20%20changeTitle(args)%20%7B%0A%20%20%20%20%20%20document.title%20%3D%20args.STR%0A%20%20%20%20%7D%0A%0A%20%20%20%20consoleAdd(args)%20%7B%0A%20%20%20%20%20%20console.log(args.STR)%0A%20%20%20%20%7D%0A%0A%20%20%20%20consoleError(args)%20%7B%0A%20%20%20%20%20%20window.console.error(args.STR)%0A%20%20%20%20%7D%0A%20%20%20%20%0A%20%20%20%20amExist(args)%20%7B%0A%20%20%20%20%20%20return%20%22Imposter%20Reporter%20as%20a%20Boolean!!%22%0A%20%20%20%20%7D%0A%20%20%20%20%0A%20%20%20%20notExist(args)%20%7B%0A%20%20%20%20%20%20return%20false%0A%20%20%20%20%7D%0A%20%20%20%20%0A%20%20%20%20getDate(args)%20%7B%0A%20%20%20%20%20%20let%20date%20%3D%20Date()%0A%20%20%20%20%20%20return%20date%0A%20%20%20%20%7D%0A%0A%20%20%20%20getMilisecs(args)%20%7B%0A%20%20%20%20%20%20let%20date%20%3D%20new%20Date()%0A%20%20%20%20%20%20return%20date.getMilliseconds()%3B%0A%20%20%20%20%7D%0A%0A%20%20%20%20getTime1970(args)%20%7B%0A%20%20%20%20%20%20let%20date%20%3D%20new%20Date()%0A%20%20%20%20%20%20return%20date.getTime()%3B%0A%20%20%20%20%7D%0A%0A%20%20%20%20YesNoAlert(args)%20%7B%0A%20%20%20%20%20%20let%20jtext%20%3D%20args.STR%0A%20%20%20%20%20%20var%20pressLog%0A%20%20%20%20%20%20if%20(confirm(jtext)%20%3D%3D%20true)%20%7B%0A%20%20%20%20%20%20%20%20pressLog%20%3D%20true%0A%20%20%20%20%20%20%7D%20else%20%7B%0A%20%20%20%20%20%20%20%20pressLog%20%3D%20false%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20return%20pressLog%0A%20%20%20%20%7D%0A%20%20%20%20%0A%20%20%20%20inputAlert(args)%20%7B%0A%20%20%20%20%20%20%20%20let%20question%20%3D%20args.STR%0A%20%20%20%20%20%20%20%20let%20normal%20%3D%20args.default%0A%20%20%20%20%20%20%20%20let%20answer%20%3D%20prompt(question%2C%20normal)%3B%0A%20%20%20%20%20%20if%20(answer%20!%3D%20null)%20%7B%0A%20%20%20%20%20%20%20%20return%20answer%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%20%20%20%20%0A%20%20%20%20currentHoliday(args)%20%7B%0A%20%20%20%20%20%20%20%20let%20date%20%3D%20new%20Date()%3B%0A%20%20%20%20%20%20%20%20let%20month%20%3D%20date.getMonth()%0A%20%20%20%20%20%20%20%20let%20day%20%3D%20date.getDate()%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20(month%20%3D%3D%200)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%201)%20%7Breturn%20%22New%20Year%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%2015)%20%7Breturn%20%22Martin%20Luther%20King%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7Delse%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20(month%20%3D%3D%201)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%202)%20%7Breturn%20%22Groundhog's%20Day%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%2019)%20%7Breturn%20%22Presidents'%20Day%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7Delse%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20(month%20%3D%3D%202)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%2031)%20%7Breturn%20%22Easter%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7Delse%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20(month%20%3D%3D%203)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%2015)%20%7Breturn%20%22Tax%20Day%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7Delse%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20(month%20%3D%3D%204)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%2012)%20%7Breturn%20%22Mother's%20Day%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7Delse%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20(month%20%3D%3D%205)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%2016)%20%7Breturn%20%22Father's%20Day%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7Delse%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20(month%20%3D%3D%206)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%204)%20%7Breturn%20%22Independence%20Day%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%2028)%20%7Breturn%20%22Parents'%20Day%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7Delse%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20(month%20%3D%3D%207)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%2F*%20Nothing%20much%20*%2F%0A%20%20%20%20%20%20%20%20%20%20%20%20%7Delse%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20(month%20%3D%3D%208)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%202)%20%7Breturn%20%22Labor%20Day%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7Delse%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20(month%20%3D%3D%209)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%2031)%20%7Breturn%20%22Halloween%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7Delse%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20(month%20%3D%3D%2010)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%2028)%20%7Breturn%20%22Thanksgiving%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7Delse%0A%20%20%20%20%20%20%20%20%20%20%20%20if%20(month%20%3D%3D%2011)%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%2025)%20%7Breturn%20%22Christmas%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20if%20(day%20%3D%3D%2031)%20%7Breturn%20%22New%20Year's%20Eve%22%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20return%20%22No%20Important%20Holidays%20Today!%22%0A%20%20%20%20%20%20%20%20%7D%0A%20%20%7D%0A%20%20%0A%20%20Scratch.extensions.register(new%20RandomlyBlocks())%0A%7D)(Scratch)%3B%0A%20%7D)(Scratch)%3B","data:text/javascript;,(function(Scratch)%20%7B%20(function%20(Scratch)%20%7B%0A%20%20%22use%20strict%22%3B%0A%0A%20%20class%20BPixelCockatiel%20%7B%0A%20%20%20%20getInfo()%20%7B%0A%20%20%20%20%20%20return%20%7B%0A%20%20%20%20%20%20%20%20id%3A%20%22BPixelCockatiel%22%2C%0A%20%20%20%20%20%20%20%20name%3A%20%22Cockatiel%20Location%22%2C%0A%20%20%20%20%20%20%20%20color1%3A%20%22%23FFA500%22%2C%0A%20%20%20%20%20%20%20%20color2%3A%20%22%23FFD700%22%2C%0A%20%20%20%20%20%20%20%20blocks%3A%20%5B%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20%22myIP%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20%22my%20IP%20address%20%5Bversion%5D%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20arguments%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20version%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20type%3A%20Scratch.ArgumentType.STRING%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20menu%3A%20%22ipVersionMenu%22%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20%22longitude%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20%22longitude%22%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20%22latitude%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20%22latitude%22%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20%22myInfo%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20%22my%20%5Binfo%5D%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20arguments%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20info%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20type%3A%20Scratch.ArgumentType.STRING%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20menu%3A%20%22infoMenu%22%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20%22isUsingVPN%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.BOOLEAN%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20%22is%20using%20VPN%3F%22%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20%22publicIP%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20%22public%20IP%20address%22%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20%22myTimezone%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20%22my%20timezone%22%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20%22distanceBetweenIPs%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20%22distance%20between%20IP%20%5Bip1%5D%20and%20IP%20%5Bip2%5D%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20arguments%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20ip1%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20type%3A%20Scratch.ArgumentType.NUMBER%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20ip2%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20type%3A%20Scratch.ArgumentType.NUMBER%0A%20%20%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20%22storeCurrentIP%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.COMMAND%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20%22store%20current%20IP%20address%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20hideFromPalette%3A%20true%20%2F%2F%20Im%20not%20fond%20of%20the%20idea%20of%20storing%20peoples%20IPs.%20Perhaps%20someone%20will%20change%20that%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20opcode%3A%20%22getStoredIP%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20blockType%3A%20Scratch.BlockType.REPORTER%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20disableMonitor%3A%20true%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20text%3A%20%22get%20stored%20IP%20address%22%2C%0A%20%20%20%20%20%20%20%20%20%20%20%20hideFromPalette%3A%20true%20%2F%2F%20Im%20not%20fond%20of%20the%20idea%20of%20storing%20peoples%20IPs.%20Perhaps%20someone%20will%20change%20that%0A%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%5D%2C%0A%20%20%20%20%20%20%20%20menus%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20ipVersionMenu%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20items%3A%20%5B%22IPv4%22%2C%20%22IPv6%22%5D%0A%20%20%20%20%20%20%20%20%20%20%7D%2C%0A%20%20%20%20%20%20%20%20%20%20infoMenu%3A%20%7B%0A%20%20%20%20%20%20%20%20%20%20%20%20items%3A%20%5B%22country%22%2C%20%22ISP%22%2C%20%22region%22%2C%20%22city%22%5D%0A%20%20%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%7D%3B%0A%20%20%20%20%7D%0A%0A%20%20%20%20async%20myIP(args)%20%7B%0A%20%20%20%20%20%20const%20version%20%3D%20args.version%3B%0A%20%20%20%20%20%20let%20url%20%3D%20%22https%3A%2F%2Fapi.ipify.org%3Fformat%3Djson%22%3B%20%2F%2F%20Default%20to%20IPv4%0A%20%20%20%20%20%20if%20(version%20%3D%3D%3D%20%22IPv6%22)%20url%20%3D%20%22https%3A%2F%2Fapi64.ipify.org%3Fformat%3Djson%22%3B%20%2F%2F%20For%20IPv6%0A%20%20%20%20%20%20try%20%7B%0A%20%20%20%20%20%20%20%20const%20response%20%3D%20await%20Scratch.fetch(url)%3B%0A%20%20%20%20%20%20%20%20const%20data%20%3D%20await%20response.json()%3B%0A%20%20%20%20%20%20%20%20return%20data.ip%3B%0A%20%20%20%20%20%20%7D%20catch%20%7B%0A%20%20%20%20%20%20%20%20return%20%22Error%20fetching%20IP%22%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%0A%20%20%20%20async%20longitude()%20%7B%0A%20%20%20%20%20%20try%20%7B%0A%20%20%20%20%20%20%20%20const%20response%20%3D%20await%20Scratch.fetch(%22https%3A%2F%2Fipwhois.app%2Fjson%2F%22)%3B%0A%20%20%20%20%20%20%20%20const%20data%20%3D%20await%20response.json()%3B%0A%20%20%20%20%20%20%20%20return%20data.longitude%20%7C%7C%20%22Not%20available%22%3B%0A%20%20%20%20%20%20%7D%20catch%20%7B%0A%20%20%20%20%20%20%20%20return%20%22Error%20fetching%20longitude%22%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%0A%20%20%20%20async%20latitude()%20%7B%0A%20%20%20%20%20%20try%20%7B%0A%20%20%20%20%20%20%20%20const%20response%20%3D%20await%20Scratch.fetch(%22https%3A%2F%2Fipwhois.app%2Fjson%2F%22)%3B%0A%20%20%20%20%20%20%20%20const%20data%20%3D%20await%20response.json()%3B%0A%20%20%20%20%20%20%20%20return%20data.latitude%20%7C%7C%20%22Not%20available%22%3B%0A%20%20%20%20%20%20%7D%20catch%20%7B%0A%20%20%20%20%20%20%20%20return%20%22Error%20fetching%20latitude%22%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%0A%20%20%20%20async%20myInfo(args)%20%7B%0A%20%20%20%20%20%20const%20info%20%3D%20args.info%3B%0A%20%20%20%20%20%20try%20%7B%0A%20%20%20%20%20%20%20%20const%20response%20%3D%20await%20Scratch.fetch(%22https%3A%2F%2Fipwhois.app%2Fjson%2F%22)%3B%0A%20%20%20%20%20%20%20%20const%20data%20%3D%20await%20response.json()%3B%0A%20%20%20%20%20%20%20%20switch%20(info)%20%7B%0A%20%20%20%20%20%20%20%20%20%20case%20%22country%22%3A%20return%20data.country%20%7C%7C%20%22Not%20available%22%3B%0A%20%20%20%20%20%20%20%20%20%20case%20%22ISP%22%3A%20return%20data.isp%20%7C%7C%20%22Not%20available%22%3B%0A%20%20%20%20%20%20%20%20%20%20case%20%22region%22%3A%20return%20data.region%20%7C%7C%20%22Not%20available%22%3B%0A%20%20%20%20%20%20%20%20%20%20case%20%22city%22%3A%20return%20data.city%20%7C%7C%20%22Not%20available%22%3B%0A%20%20%20%20%20%20%20%20%20%20default%3A%20return%20%22Invalid%20option%22%3B%0A%20%20%20%20%20%20%20%20%7D%0A%20%20%20%20%20%20%7D%20catch%20%7B%0A%20%20%20%20%20%20%20%20return%20%22Error%20fetching%20info%22%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%0A%20%20%20%20async%20isUsingVPN()%20%7B%0A%20%20%20%20%20%20try%20%7B%0A%20%20%20%20%20%20%20%20const%20response%20%3D%20await%20Scratch.fetch(%22https%3A%2F%2Fipwhois.app%2Fjson%2F%22)%3B%0A%20%20%20%20%20%20%20%20const%20data%20%3D%20await%20response.json()%3B%0A%20%20%20%20%20%20%20%20return%20data.is_vpn%20%7C%7C%20false%3B%0A%20%20%20%20%20%20%7D%20catch%20%7B%0A%20%20%20%20%20%20%20%20return%20false%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%0A%20%20%20%20async%20publicIP()%20%7B%0A%20%20%20%20%20%20try%20%7B%0A%20%20%20%20%20%20%20%20const%20response%20%3D%20await%20Scratch.fetch(%22https%3A%2F%2Fapi.ipify.org%3Fformat%3Djson%22)%3B%20%2F%2F%20Always%20fetch%20IPv4%0A%20%20%20%20%20%20%20%20const%20data%20%3D%20await%20response.json()%3B%0A%20%20%20%20%20%20%20%20return%20data.ip%3B%0A%20%20%20%20%20%20%7D%20catch%20%7B%0A%20%20%20%20%20%20%20%20return%20%22Error%20fetching%20public%20IP%22%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%0A%20%20%20%20async%20myTimezone()%20%7B%0A%20%20%20%20%20%20try%20%7B%0A%20%20%20%20%20%20%20%20const%20response%20%3D%20await%20Scratch.fetch(%22https%3A%2F%2Fipwhois.app%2Fjson%2F%22)%3B%0A%20%20%20%20%20%20%20%20const%20data%20%3D%20await%20response.json()%3B%0A%20%20%20%20%20%20%20%20return%20data.timezone%20%7C%7C%20%22Not%20available%22%3B%0A%20%20%20%20%20%20%7D%20catch%20%7B%0A%20%20%20%20%20%20%20%20return%20%22Error%20fetching%20timezone%22%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%0A%20%20%20%20async%20distanceBetweenIPs(args)%20%7B%0A%20%20%20%20%20%20const%20%7B%20ip1%2C%20ip2%20%7D%20%3D%20args%3B%0A%20%20%20%20%20%20const%20location1%20%3D%20await%20this.fetchLocation(ip1)%3B%0A%20%20%20%20%20%20const%20location2%20%3D%20await%20this.fetchLocation(ip2)%3B%0A%0A%20%20%20%20%20%20if%20(location1.latitude%20%26%26%20location1.longitude%20%26%26%20location2.latitude%20%26%26%20location2.longitude)%20%7B%0A%20%20%20%20%20%20%20%20return%20this.haversineDistance(location1.latitude%2C%20location1.longitude%2C%20location2.latitude%2C%20location2.longitude)%3B%0A%20%20%20%20%20%20%7D%20else%20%7B%0A%20%20%20%20%20%20%20%20return%20%22No%20results%20found%20%22%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%0A%20%20%20%20async%20fetchLocation(ip)%20%7B%0A%20%20%20%20%20%20try%20%7B%0A%20%20%20%20%20%20%20%20const%20response%20%3D%20await%20Scratch.fetch(%60https%3A%2F%2Fipwhois.app%2Fjson%2F%24%7Bip%7D%60)%3B%0A%20%20%20%20%20%20%20%20const%20data%20%3D%20await%20response.json()%3B%0A%20%20%20%20%20%20%20%20return%20%7B%0A%20%20%20%20%20%20%20%20%20%20latitude%3A%20data.latitude%2C%20longitude%3A%20data.longitude%0A%20%20%20%20%20%20%20%20%7D%3B%0A%20%20%20%20%20%20%7D%20catch%20(error)%20%7B%0A%20%20%20%20%20%20%20%20return%20%7B%0A%20%20%20%20%20%20%20%20%20%20latitude%3A%20null%2C%20longitude%3A%20null%0A%20%20%20%20%20%20%20%20%7D%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%0A%20%20%20%20haversineDistance(lat1%2C%20lon1%2C%20lat2%2C%20lon2)%20%7B%0A%20%20%20%20%20%20const%20R%20%3D%206371%3B%20%2F%2F%20Radius%20of%20the%20Earth%20in%20km%0A%20%20%20%20%20%20const%20dLat%20%3D%20this.degreesToRadians(lat2%20-%20lat1)%3B%0A%20%20%20%20%20%20const%20dLon%20%3D%20this.degreesToRadians(lon2%20-%20lon1)%3B%0A%20%20%20%20%20%20const%20a%20%3D%0A%20%20%20%20%20%20%20%20Math.sin(dLat%20%2F%202)%20*%20Math.sin(dLat%20%2F%202)%20%2B%0A%20%20%20%20%20%20%20%20Math.cos(this.degreesToRadians(lat1))%20*%20Math.cos(this.degreesToRadians(lat2))%20*%0A%20%20%20%20%20%20%20%20Math.sin(dLon%20%2F%202)%20*%20Math.sin(dLon%20%2F%202)%3B%0A%20%20%20%20%20%20const%20c%20%3D%202%20*%20Math.atan2(Math.sqrt(a)%2C%20Math.sqrt(1%20-%20a))%3B%0A%20%20%20%20%20%20return%20R%20*%20c%3B%20%2F%2F%20Distance%20in%20km%0A%20%20%20%20%7D%0A%0A%20%20%20%20degreesToRadians(degrees)%20%7B%0A%20%20%20%20%20%20return%20degrees%20*%20(Math.PI%20%2F%20180)%3B%0A%20%20%20%20%7D%0A%0A%20%20%20%20async%20storeCurrentIP()%20%7B%0A%20%20%20%20%20%20try%20%7B%0A%20%20%20%20%20%20%20%20const%20ip%20%3D%20await%20this.myIP(%7Bversion%3A%20%22IPv4%22%7D)%3B%20%2F%2F%20Store%20IPv4%20IP%0A%20%20%20%20%20%20%20%20localStorage.setItem(%22currentIP%22%2C%20ip)%3B%0A%20%20%20%20%20%20%20%20return%20%22IP%20stored%20successfully%22%3B%0A%20%20%20%20%20%20%7D%20catch%20%7B%0A%20%20%20%20%20%20%20%20return%20%22Error%20storing%20IP%22%3B%0A%20%20%20%20%20%20%7D%0A%20%20%20%20%7D%0A%0A%20%20%20%20getStoredIP()%20%7B%0A%20%20%20%20%20%20const%20ip%20%3D%20localStorage.getItem(%22currentIP%22)%3B%0A%20%20%20%20%20%20if%20(ip)%20return%20ip%3B%0A%20%20%20%20%20%20else%20return%20%22No%20IP%20stored%22%3B%0A%20%20%20%20%7D%0A%20%20%7D%0A%0A%20%20Scratch.extensions.register(new%20BPixelCockatiel())%3B%0A%7D)(Scratch)%3B%0A%20%7D)(Scratch)%3B"]) {
+        vm.extensionManager.loadExtensionURL(extension);
+      }
+
+      vm.runtime.isProjectPermissionManagerDisabled = true;
+      
+    } catch (e) {
+      handleError(e);
+    }
+  </script>
+  
+  
+    <script>
+      const getProjectData = (function() {
+        const storage = scaffolding.storage;
+        storage.onprogress = (total, loaded) => {
+          setProgress(interpolate(0.2, 0.98, loaded / total));
+        };
+        
+        storage.addWebStore(
+          [
+            storage.AssetType.ImageVector,
+            storage.AssetType.ImageBitmap,
+            storage.AssetType.Sound,
+            storage.AssetType.Font
+          ].filter(i => i),
+          (asset) => new URL('./assets/' + asset.assetId + '.' + asset.dataFormat, location).href
+        );
+        return () => new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = () => {
+          resolve(xhr.response);
+        };
+        xhr.onerror = () => {
+          if (location.protocol === 'file:') {
+            reject(new Error('Zip environment must be used from a website, not from a file URL.'));
+          } else {
+            reject(new Error('Request to load project data failed.'));
+          }
+        };
+        xhr.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setProgress(interpolate(0.1, 0.2, e.loaded / e.total));
+          }
+        };
+        xhr.responseType = 'arraybuffer';
+        xhr.open('GET', "./assets/project.json");
+        xhr.send();
+      });
+      })();
+    </script>
+  <script>
+    const run = async () => {
+      const projectData = await getProjectData();
+      await scaffolding.loadProject(projectData);
+      setProgress(1);
+      loadingScreen.hidden = true;
+      if (true) {
+        scaffolding.start();
+      } else {
+        launchScreen.hidden = false;
+        launchScreen.addEventListener('click', () => {
+          launchScreen.hidden = true;
+          scaffolding.start();
+        });
+        launchScreen.focus();
+      }
+    };
+    run().catch(handleError);
+  </script>
+</body>
+</html>
